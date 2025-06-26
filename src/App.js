@@ -11,13 +11,13 @@ const StructuredReport = ({ data }) => {
     const getConfidenceChip = (confidence) => {
         switch (confidence?.toLowerCase()) {
             case 'high':
-                return <span className="inline-block bg-green-500/20 text-green-300 text-xs font-medium px-2.5 py-1 rounded-full">High</span>;
+                return <span className="inline-block bg-green-500/20 text-green-300 text-xs font-medium px-2.5 py-1 rounded-full border border-green-500/30">High (95-100%)</span>;
             case 'medium':
-                return <span className="inline-block bg-yellow-500/20 text-yellow-300 text-xs font-medium px-2.5 py-1 rounded-full">Medium</span>;
+                return <span className="inline-block bg-yellow-500/20 text-yellow-300 text-xs font-medium px-2.5 py-1 rounded-full border border-yellow-500/30">Medium (70-94%)</span>;
             case 'low':
-                return <span className="inline-block bg-blue-500/20 text-blue-300 text-xs font-medium px-2.5 py-1 rounded-full">Low</span>;
+                return <span className="inline-block bg-orange-500/20 text-orange-300 text-xs font-medium px-2.5 py-1 rounded-full border border-orange-500/30">Low (&lt;70%)</span>;
             default:
-                return <span className="inline-block bg-slate-600 text-slate-300 text-xs font-medium px-2.5 py-1 rounded-full">{confidence}</span>;
+                return <span className="inline-block bg-slate-600 text-slate-300 text-xs font-medium px-2.5 py-1 rounded-full border border-slate-500">{confidence}</span>;
         }
     };
     
@@ -143,35 +143,82 @@ const App = () => {
 
         const prompt = `
             ${patientContext}
-            Role: Act as a board-certified radiologist.
-            Task: Analyze the provided series of CT head scan images with utmost precision, considering the patient context. Synthesize findings from all images into a single JSON report.
-            Instructions: Examine the entire series for abnormalities (hemorrhage, stroke, tumors, fractures, edema, etc.). Based on your findings, populate the JSON object according to the provided schema. Ensure the observations, diagnoses, and recommendations are clear and concise.
+
+            Role: You are a highly experienced, board-certified neuroradiologist with 20+ years of expertise in CT head scan interpretation.
+
+            Critical Instructions:
+            1. ONLY provide diagnoses when you are 95-100% confident based on clear, unambiguous radiological findings
+            2. If findings are subtle, unclear, or could represent normal variants, classify confidence as "Low" and recommend further evaluation
+            3. Use conservative, evidence-based medical language
+            4. Prioritize patient safety - when in doubt, recommend additional imaging or specialist consultation
+            5. Focus on clinically significant findings that require immediate attention or follow-up
+
+            Task: Perform a systematic, methodical analysis of the provided CT head scan series with maximum precision and clinical accuracy.
+
+            Analysis Protocol:
+            - Examine each image systematically: brain parenchyma, ventricular system, cisterns, skull, and soft tissues
+            - Look for: acute hemorrhage (intraparenchymal, subarachnoid, subdural, epidural), ischemic changes, mass lesions, midline shift, hydrocephalus, fractures
+            - Correlate findings across all images in the series
+            - Consider patient age, clinical history, and presentation when interpreting findings
+            - Only assign "High" confidence to findings that are unequivocally abnormal and clinically significant
+            - Use "Medium" confidence for findings that are likely abnormal but may need correlation
+            - Use "Low" confidence for subtle findings or when normal variants cannot be excluded
+
+            Output Requirements:
+            - Provide detailed, specific observations using precise radiological terminology
+            - List potential diagnoses in order of likelihood with appropriate confidence levels
+            - Include actionable recommendations based on findings and confidence levels
+            - Always include appropriate medical disclaimers about limitations of AI analysis
         `;
         
         const imageParts = images.map(image => ({ inlineData: { mimeType: "image/jpeg", data: image.base64 } }));
         
-        // UPDATED: Payload with JSON schema definition
+        // UPDATED: Payload with JSON schema definition and temperature control
         const payload = {
             contents: [{ parts: [{ text: prompt }, ...imageParts] }],
             generationConfig: {
+                temperature: 0.0, // Maximum precision and consistency
+                topP: 0.1, // Focus on most likely tokens
+                topK: 1, // Most conservative token selection
                 responseMimeType: "application/json",
                 responseSchema: {
                     type: "OBJECT",
                     properties: {
-                        "observations": { "type": "ARRAY", "items": { "type": "STRING" } },
-                        "potentialDiagnoses": { 
-                            "type": "ARRAY", 
-                            "items": { 
+                        "observations": {
+                            "type": "ARRAY",
+                            "items": { "type": "STRING" },
+                            "description": "Detailed, specific radiological observations using precise medical terminology"
+                        },
+                        "potentialDiagnoses": {
+                            "type": "ARRAY",
+                            "items": {
                                 "type": "OBJECT",
                                 "properties": {
-                                    "diagnosis": { "type": "STRING" },
-                                    "confidence": { "type": "STRING" }
-                                }
-                            } 
+                                    "diagnosis": {
+                                        "type": "STRING",
+                                        "description": "Specific diagnosis with precise medical terminology"
+                                    },
+                                    "confidence": {
+                                        "type": "STRING",
+                                        "enum": ["High", "Medium", "Low"],
+                                        "description": "High: 95-100% confident, Medium: 70-94% confident, Low: <70% confident or requires correlation"
+                                    }
+                                },
+                                "required": ["diagnosis", "confidence"]
+                            },
+                            "description": "Potential diagnoses listed in order of likelihood with confidence levels"
                         },
-                        "recommendations": { "type": "ARRAY", "items": { "type": "STRING" } },
-                        "disclaimer": { "type": "STRING" }
-                    }
+                        "recommendations": {
+                            "type": "ARRAY",
+                            "items": { "type": "STRING" },
+                            "description": "Actionable clinical recommendations based on findings and confidence levels"
+                        },
+                        "disclaimer": {
+                            "type": "STRING",
+                            "description": "Medical disclaimer about AI limitations and need for professional review"
+                        }
+                    },
+                    "required": ["observations", "potentialDiagnoses", "recommendations", "disclaimer"]
                 }
             }
         };
@@ -294,7 +341,10 @@ const App = () => {
                             </div></div>
                         </div>
                     </main>
-                     <footer className="text-center mt-12 text-sm text-slate-500"><p><strong>Disclaimer:</strong> This tool is an AI-powered assistant for medical professionals and is for informational purposes only.</p></footer>
+                     <footer className="text-center mt-12 text-sm text-slate-500 space-y-2">
+                        <p><strong>Enhanced Accuracy Mode:</strong> AI configured for maximum precision with conservative confidence thresholds (95-100% for high confidence diagnoses).</p>
+                        <p><strong>Disclaimer:</strong> This tool is an AI-powered assistant for medical professionals and is for informational purposes only. All findings require professional medical review and correlation with clinical presentation.</p>
+                    </footer>
                 </div>
             </div>
         </>

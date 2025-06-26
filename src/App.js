@@ -1,6 +1,8 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { ArrowUpTrayIcon, DocumentTextIcon, XCircleIcon, BeakerIcon, ArrowPathIcon, ClipboardDocumentIcon, PrinterIcon, ExclamationTriangleIcon } from '@heroicons/react/24/solid';
+import { ArrowUpTrayIcon, DocumentTextIcon, XCircleIcon, BeakerIcon, ArrowPathIcon, ClipboardDocumentIcon, PrinterIcon, ExclamationTriangleIcon, PowerIcon } from '@heroicons/react/24/solid';
+import Login from './components/Login';
+import { isAuthenticated, login, logout, getRemainingRequests, canMakeRequest, incrementRequestCount } from './utils/auth';
 
 // UPDATED: New component to render the structured JSON report
 const StructuredReport = ({ data }) => {
@@ -67,6 +69,11 @@ const StructuredReport = ({ data }) => {
 
 // Main App Component
 const App = () => {
+    // Authentication state
+    const [authenticated, setAuthenticated] = useState(false);
+    const [remainingRequests, setRemainingRequests] = useState(0);
+
+    // Existing state
     const [images, setImages] = useState([]);
     const [analysis, setAnalysis] = useState(null); // Will hold the JSON object
     const [isLoading, setIsLoading] = useState(false);
@@ -78,10 +85,43 @@ const App = () => {
     const [patientGender, setPatientGender] = useState('');
     const [clinicalHistory, setClinicalHistory] = useState('');
 
+    // Check authentication and remaining requests on component mount
+    useEffect(() => {
+        setAuthenticated(isAuthenticated());
+        setRemainingRequests(getRemainingRequests());
+    }, []);
+
+    // Authentication handlers
+    const handleLogin = () => {
+        login();
+        setAuthenticated(true);
+        setRemainingRequests(getRemainingRequests());
+    };
+
+    const handleLogout = () => {
+        logout();
+        setAuthenticated(false);
+        // Clear all data when logging out
+        setImages([]);
+        setAnalysis(null);
+        setError(null);
+        setPatientName('');
+        setPatientAge('');
+        setPatientGender('');
+        setClinicalHistory('');
+        setCopySuccess('');
+    };
+
     // UPDATED: Logic to handle structured JSON analysis
     const handleAnalysis = async () => {
         if (images.length === 0) {
             setError("Please upload at least one CT scan image.");
+            return;
+        }
+
+        // Check if user can make a request
+        if (!canMakeRequest()) {
+            setError("Request limit reached. No more analyses available.");
             return;
         }
 
@@ -144,6 +184,10 @@ const App = () => {
                 // The API returns the JSON as a string, so we need to parse it
                 const parsedAnalysis = JSON.parse(result.candidates[0].content.parts[0].text);
                 setAnalysis(parsedAnalysis);
+
+                // Increment request count and update remaining requests
+                incrementRequestCount();
+                setRemainingRequests(getRemainingRequests());
             } else if (result.candidates && result.candidates[0].finishReason === "SAFETY") {
                  setError("Analysis stopped due to safety settings. One or more images may contain sensitive content.");
             } else { throw new Error("Failed to get a valid analysis from the API."); }
@@ -191,17 +235,55 @@ const App = () => {
     const inputStyles = "w-full bg-slate-700/50 border border-slate-600 rounded-md py-2 px-3 text-white placeholder-slate-400 focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 transition";
     const labelStyles = "block text-sm font-medium text-slate-300 mb-1";
 
+    // Show login page if not authenticated
+    if (!authenticated) {
+        return <Login onLogin={handleLogin} remainingRequests={remainingRequests} />;
+    }
+
     return (
         <>
             <style>{`@media print{body *{visibility:hidden}#print-section,#print-section *{visibility:visible}#print-section{position:absolute;left:0;top:0;width:100%;padding:2rem;color:#000!important}#print-section h2,#print-section h3,#print-section h4,#print-section p,#print-section li,#print-section strong{color:#000!important}#print-section table{color:#000!important}#print-section ul{list-style-position:outside;padding-left:20px}}`}</style>
             <div className="bg-slate-900 min-h-screen font-sans text-slate-200 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-700 via-slate-900 to-black print:hidden">
                 <div className="container mx-auto p-4 sm:p-6 lg:p-8">
-                    <header className="text-center mb-10"><div className="inline-flex items-center justify-center"><svg className="w-12 h-12 text-cyan-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9.5 2.5c1.4-1.2 3.6-1.2 5 0l4.5 4c1.4 1.2 1.4 3.3 0 4.5l-4.5 4c-1.4 1.2-3.6 1.2-5 0l-4.5-4c-1.4-1.2-1.4-3.3 0-4.5l4.5-4z"></path><path d="M5.5 6.5l4 4"></path><path d="M14.5 6.5l-4 4"></path><path d="M10 14.5v-4"></path></svg><h1 className="text-4xl sm:text-5xl font-bold text-white ml-3">GuardianNeuro</h1></div><p className="text-lg text-slate-400 mt-2">AI-Powered Diagnostic Assistant for CT Head Scans</p></header>
+                    <header className="mb-10">
+                        {/* Top bar with logout and request counter */}
+                        <div className="flex justify-between items-center mb-6">
+                            <div className="flex items-center space-x-4">
+                                <div className="text-sm text-slate-400">
+                                    <span>Requests remaining: </span>
+                                    <span className={`font-bold ${remainingRequests <= 10 ? 'text-red-400' : 'text-cyan-400'}`}>
+                                        {remainingRequests}/50
+                                    </span>
+                                </div>
+                            </div>
+                            <button
+                                onClick={handleLogout}
+                                className="flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors py-2 px-4 bg-slate-700/50 rounded-md border border-slate-600 hover:border-red-400"
+                            >
+                                <PowerIcon className="w-4 h-4" />
+                                Logout
+                            </button>
+                        </div>
+
+                        {/* Main header */}
+                        <div className="text-center">
+                            <div className="inline-flex items-center justify-center">
+                                <svg className="w-12 h-12 text-cyan-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M9.5 2.5c1.4-1.2 3.6-1.2 5 0l4.5 4c1.4 1.2 1.4 3.3 0 4.5l-4.5 4c-1.4 1.2-3.6 1.2-5 0l-4.5-4c-1.4-1.2-1.4-3.3 0-4.5l4.5-4z"></path>
+                                    <path d="M5.5 6.5l4 4"></path>
+                                    <path d="M14.5 6.5l-4 4"></path>
+                                    <path d="M10 14.5v-4"></path>
+                                </svg>
+                                <h1 className="text-4xl sm:text-5xl font-bold text-white ml-3">GuardianNeuro</h1>
+                            </div>
+                            <p className="text-lg text-slate-400 mt-2">AI-Powered Diagnostic Assistant for CT Head Scans</p>
+                        </div>
+                    </header>
                     <main className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                         <div className="bg-white/5 backdrop-blur-xl p-6 rounded-2xl shadow-2xl border border-white/10 flex flex-col"><div className="flex justify-between items-center mb-4"><h2 className="text-2xl font-semibold text-cyan-300">1. Upload & Details</h2><button onClick={clearCase} className="flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors py-1 px-3 bg-slate-700/50 rounded-md border border-slate-600 hover:border-cyan-400"><ArrowPathIcon className="w-4 h-4" />Clear Case</button></div><div {...getRootProps()} className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all duration-300 ${isDragActive ? 'border-cyan-400 bg-cyan-500/10' : 'border-slate-600 hover:border-cyan-500'}`}><input {...getInputProps()} /><ArrowUpTrayIcon className="w-12 h-12 mx-auto text-slate-500" /><p className="mt-2 text-slate-400">Drag & drop scans, or click to select.</p></div>
                             {images.length > 0 && (<div className="mt-4"><h3 className="text-lg font-medium text-slate-200 mb-2">Image Previews ({images.length})</h3><div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3 max-h-40 overflow-y-auto p-2 bg-slate-800/50 rounded-lg">{images.map((image, index) => (<div key={index} className="relative group aspect-square"><img src={image.preview} alt={`Scan preview ${index + 1}`} className="w-full h-full object-cover rounded-md" /><button onClick={() => removeImage(index)} className="absolute top-1 right-1 bg-black/60 backdrop-blur-sm rounded-full p-1 text-slate-300 hover:bg-red-500 hover:text-white transition-all opacity-50 group-hover:opacity-100" aria-label="Remove image"><XCircleIcon className="w-5 h-5" /></button></div>))}</div></div>)}
                             <div className="mt-6 space-y-4 border-t border-white/10 pt-6"><h3 className="text-xl font-medium text-slate-200">Optional Patient Details</h3><div className="grid grid-cols-1 sm:grid-cols-2 gap-4"><div><label htmlFor="patientName" className={labelStyles}>Patient Name</label><input type="text" id="patientName" value={patientName} onChange={(e) => setPatientName(e.target.value)} className={inputStyles} placeholder="e.g., John Doe" /></div><div><label htmlFor="patientAge" className={labelStyles}>Age</label><input type="text" id="patientAge" value={patientAge} onChange={(e) => setPatientAge(e.target.value)} className={inputStyles} placeholder="e.g., 45" /></div></div><div><label htmlFor="patientGender" className={labelStyles}>Gender</label><select id="patientGender" value={patientGender} onChange={(e) => setPatientGender(e.target.value)} className={inputStyles}><option value="">Select...</option><option value="Male">Male</option><option value="Female">Female</option><option value="Other">Other</option></select></div><div><label htmlFor="clinicalHistory" className={labelStyles}>Brief Clinical History / Indication</label><textarea id="clinicalHistory" value={clinicalHistory} onChange={(e) => setClinicalHistory(e.target.value)} rows="3" className={inputStyles} placeholder="e.g., Headache following trauma"></textarea></div></div>
-                            <div className="mt-auto pt-6 text-center"><button onClick={handleAnalysis} disabled={images.length === 0 || isLoading} className="w-full bg-gradient-to-br from-cyan-500 to-blue-600 text-white font-bold py-3 px-8 rounded-lg shadow-lg hover:from-cyan-400 hover:to-blue-500 disabled:from-slate-600 disabled:to-slate-700 disabled:text-slate-400 disabled:cursor-not-allowed disabled:shadow-none transition-all duration-300 transform hover:scale-105 disabled:scale-100">{isLoading ? "Analyzing..." : "2. Analyze Scans"}</button></div>
+                            <div className="mt-auto pt-6 text-center"><button onClick={handleAnalysis} disabled={images.length === 0 || isLoading || remainingRequests <= 0} className="w-full bg-gradient-to-br from-cyan-500 to-blue-600 text-white font-bold py-3 px-8 rounded-lg shadow-lg hover:from-cyan-400 hover:to-blue-500 disabled:from-slate-600 disabled:to-slate-700 disabled:text-slate-400 disabled:cursor-not-allowed disabled:shadow-none transition-all duration-300 transform hover:scale-105 disabled:scale-100">{isLoading ? "Analyzing..." : remainingRequests <= 0 ? "No Requests Remaining" : "2. Analyze Scans"}</button></div>
                         </div>
                         <div className="bg-white/5 backdrop-blur-xl p-6 rounded-2xl shadow-2xl border border-white/10 flex flex-col">
                             <div className="flex justify-between items-center mb-4"><h2 className="text-2xl font-semibold text-cyan-300 flex items-center"><DocumentTextIcon className="w-7 h-7 mr-3"/>Diagnostic Report</h2><div className="flex items-center gap-2"><button onClick={copyToClipboard} disabled={!analysis || isLoading} className="flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors py-1 px-3 bg-slate-700/50 rounded-md border border-slate-600 hover:border-cyan-400 disabled:opacity-50 disabled:cursor-not-allowed"><ClipboardDocumentIcon className="w-4 h-4" />{copySuccess || "Copy"}</button><button onClick={printReport} disabled={!analysis || isLoading} className="flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors py-1 px-3 bg-slate-700/50 rounded-md border border-slate-600 hover:border-cyan-400 disabled:opacity-50 disabled:cursor-not-allowed"><PrinterIcon className="w-4 h-4" />Print</button></div></div>

@@ -1,6 +1,6 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { ArrowUpTrayIcon, DocumentTextIcon, XCircleIcon, BeakerIcon, ArrowPathIcon, ClipboardDocumentIcon, PrinterIcon, CheckCircleIcon, ExclamationTriangleIcon } from '@heroicons/react/24/solid';
+import { ArrowUpTrayIcon, DocumentTextIcon, XCircleIcon, BeakerIcon, ArrowPathIcon, ClipboardDocumentIcon, PrinterIcon, ExclamationTriangleIcon } from '@heroicons/react/24/solid';
 
 // UPDATED: New component to render the structured JSON report
 const StructuredReport = ({ data }) => {

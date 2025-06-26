@@ -1,70 +1,95 @@
-# Getting Started with Create React App
+# GuardianNeuro - AI-Powered CT Scan Analysis
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+GuardianNeuro is an advanced AI-powered diagnostic assistant specifically designed for analyzing CT head scans. Built with React and powered by Google's Gemini 2.5 Pro API, it provides medical professionals with structured diagnostic insights.
 
-## Available Scripts
+## 🚀 Features
 
-In the project directory, you can run:
+- **AI-Powered Analysis**: Utilizes Google's Gemini 2.5 Pro for accurate CT scan interpretation
+- **Drag & Drop Interface**: Easy upload of multiple CT scan images
+- **Patient Information Management**: Optional patient details and clinical history
+- **Structured Reports**: Organized observations, potential diagnoses, and recommendations
+- **Modern UI**: Dark theme with responsive design using Tailwind CSS
+- **Export Functionality**: Print and copy reports for documentation
+- **Security**: Environment-based API key management
 
-### `npm start`
+## 🛠️ Technology Stack
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+- **Frontend**: React 19.1.0
+- **Styling**: Tailwind CSS 3.4.0
+- **Icons**: Heroicons React
+- **File Upload**: React Dropzone
+- **AI API**: Google Gemini 2.5 Pro
+- **Build Tool**: Create React App
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+## 📋 Prerequisites
 
-### `npm test`
+- Node.js (v14 or higher)
+- npm or yarn
+- Google Gemini API key
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+## 🔧 Installation
 
-### `npm run build`
+1. Clone the repository:
+```bash
+git clone https://github.com/OGUN01/ct_scan.git
+cd ct_scan
+```
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+2. Install dependencies:
+```bash
+npm install
+```
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+3. Create a `.env` file in the root directory:
+```bash
+REACT_APP_GEMINI_API_KEY=your_gemini_api_key_here
+```
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+4. Start the development server:
+```bash
+npm start
+```
 
-### `npm run eject`
+The application will open at `http://localhost:3000`
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+## 🚀 Deployment
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+### Vercel Deployment
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+1. Push your code to GitHub (already done)
+2. Connect your GitHub repository to Vercel
+3. Add the environment variable `REACT_APP_GEMINI_API_KEY` in Vercel dashboard
+4. Deploy!
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+## 📖 Usage
 
-## Learn More
+1. **Upload CT Scans**: Drag and drop or click to select CT scan images
+2. **Add Patient Details**: Optionally fill in patient information and clinical history
+3. **Analyze**: Click "Analyze Scans" to get AI-powered diagnostic insights
+4. **Review Results**: View structured observations, diagnoses, and recommendations
+5. **Export**: Copy or print the report for documentation
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+## ⚠️ Disclaimer
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+This tool is an AI-powered assistant for medical professionals and is for informational purposes only. It should not replace professional medical judgment or be used as the sole basis for medical decisions.
 
-### Code Splitting
+## 🔒 Security
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+- API keys are stored as environment variables
+- No sensitive data is stored locally
+- All API communications are encrypted
 
-### Analyzing the Bundle Size
+## 🤝 Contributing
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Submit a pull request
 
-### Making a Progressive Web App
+## 📄 License
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+This project is licensed under the MIT License.
 
-### Advanced Configuration
+## 📞 Support
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+For support or questions, please open an issue on GitHub.
